@@ -1,25 +1,39 @@
 # Prisma Console
 
-Real-time web console for monitoring and managing the [Prisma](https://github.com/prisma-proxy/prisma) proxy server. Built as a static site and served directly by the Prisma server.
+Real-time web management dashboard for the [Prisma](https://github.com/prisma-proxy/prisma) encrypted proxy system. Built with Next.js as a static site served directly by the Prisma management API.
 
-## Build
+## Features
+
+- **Dashboard** — live metrics, connection map (Natural Earth 50m), traffic charts, health score
+- **Client management** — add/remove/toggle clients, share via TOML/URI/QR, per-client bandwidth and quota
+- **Subscriptions** — redemption codes (`PRISMA-XXXX`), invite links, plan management with expiry and permissions
+- **Routing** — visual rules editor, GeoSite/GeoIP presets, rule providers
+- **Connections** — real-time connection tracking with filtering and virtual scrolling
+- **Analytics** — traffic by domain, daily trends, top connections, CSV export
+- **Logs** — real-time log stream with level/keyword filtering
+- **Server management** — config editor, TLS info, port forwards, listener status
+- **Settings** — registration toggle, session expiry, auto-backup, alerts
+- **Multi-language** — English and Chinese (Simplified)
+- **Dark mode** — automatic and manual theme switching
+
+## Quick Start
 
 ```bash
-npm ci
+npm install
 npm run build
 ```
 
-Static files are output to `out/`. Configure the server to serve them:
+Static files are output to `out/`. Configure the Prisma server to serve them:
 
 ```toml
 [management_api]
 enabled = true
-listen_addr = "127.0.0.1:9090"
+listen_addr = "0.0.0.0:9090"
 auth_token = "your-secure-token-here"
-console_dir = "./apps/prisma-console/out"
+console_dir = "./out"
 ```
 
-Then access the console at `http://127.0.0.1:9090/`. Log in using the `auth_token` from your server config.
+Access the console at `https://your-server:9090/`.
 
 ## Development
 
@@ -29,22 +43,27 @@ npm run dev
 # → http://localhost:3000
 ```
 
-During development, the console connects to the management API on the same origin. Start the Prisma server with the management API enabled and configure `cors_origins` if running the dev server on a different port.
-
-## Pages
-
-| Page | Description |
-|------|-------------|
-| **Overview** | Live metrics, traffic chart, active connections |
-| **Server** | Health, config, TLS info |
-| **Clients** | Add/remove/toggle clients at runtime |
-| **Routing** | Visual routing rules editor |
-| **Logs** | Real-time log stream with filtering |
-| **Settings** | Server config editor |
+During development, the console connects to the management API on the same origin. Start the Prisma server with the management API enabled.
 
 ## Tech Stack
 
-- [Next.js 16](https://nextjs.org/) (App Router, static export)
-- [shadcn/ui](https://ui.shadcn.com/) (component library)
-- [Recharts](https://recharts.org/) (traffic charts)
-- [TanStack Query](https://tanstack.com/query) (data fetching)
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router, static export) |
+| UI | shadcn/ui + Tailwind CSS 4 |
+| Charts | Recharts + react-simple-maps |
+| Data | TanStack React Query + WebSocket |
+| State | Zustand |
+| i18n | Custom context-based system (EN + ZH) |
+
+## Related Repositories
+
+| Repository | Description |
+|------------|-------------|
+| [prisma](https://github.com/prisma-proxy/prisma) | Core Rust workspace (server, client, CLI, FFI, management API) |
+| [prisma-gui](https://github.com/prisma-proxy/prisma-gui) | Desktop + mobile client (Tauri 2 + React) |
+| [prisma-docs](https://github.com/prisma-proxy/prisma-docs) | Documentation site (Docusaurus) |
+
+## License
+
+MIT
