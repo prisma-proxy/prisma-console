@@ -16,7 +16,7 @@ import { MapTooltip } from "./connection-map/map-tooltip";
 import { MapLegend } from "./connection-map/map-legend";
 
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 4;
+const MAX_ZOOM = 5;
 
 export function ConnectionMap() {
   const { t } = useI18n();
@@ -29,8 +29,9 @@ export function ConnectionMap() {
   const [hoveredGeo, setHoveredGeo] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<string | null>(null);
 
-  // Zoom state
+  // Zoom + pan state
   const [zoom, setZoom] = useState(1);
+  const [center, setCenter] = useState<[number, number]>([0, 0]);
 
   const { data: geo } = useQuery({
     queryKey: ["connections-geo"],
@@ -99,15 +100,16 @@ export function ConnectionMap() {
   }, []);
 
   const handleZoomIn = useCallback(() => {
-    setZoom((z) => Math.min(z * 1.5, MAX_ZOOM));
+    setZoom((z) => Math.min(z * 1.4, MAX_ZOOM));
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoom((z) => Math.max(z / 1.5, MIN_ZOOM));
+    setZoom((z) => Math.max(z / 1.4, MIN_ZOOM));
   }, []);
 
   const handleReset = useCallback(() => {
     setZoom(1);
+    setCenter([0, 0]);
   }, []);
 
   if (!geo || geo.length === 0) {
@@ -176,6 +178,11 @@ export function ConnectionMap() {
             >
               <RotateCcw className="h-3 w-3" />
             </Button>
+            {zoom > 1 && (
+              <span className="text-[10px] text-muted-foreground text-center leading-none">
+                {zoom.toFixed(1)}x
+              </span>
+            )}
           </div>
 
           <ComposableMap
@@ -187,9 +194,13 @@ export function ConnectionMap() {
           >
             <ZoomableGroup
               zoom={zoom}
+              center={center}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
-              onMoveEnd={({ zoom: z }) => setZoom(z)}
+              onMoveEnd={({ coordinates, zoom: z }) => {
+                setZoom(z);
+                setCenter(coordinates);
+              }}
             >
               <MapGeography
                 countryTotals={countryTotals}
