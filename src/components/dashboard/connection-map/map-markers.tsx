@@ -44,8 +44,8 @@ export const CityMarkers = memo(function CityMarkers({
           <Marker key={key} coordinates={[entry.lon!, entry.lat!]}>
             <circle
               r={r + 1.5}
-              fill={colors.cityDotFill}
-              opacity={isHovered ? 1 : 0.85}
+              fill={colors.cityDotStroke}
+              opacity={isHovered ? 0.4 : 0.2}
             />
             <circle
               r={r}
