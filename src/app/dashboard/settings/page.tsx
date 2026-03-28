@@ -35,6 +35,35 @@ export default function SettingsPage() {
   const [isDirty, setIsDirty] = React.useState(false);
   const [savedConfig, setSavedConfig] = React.useState<Record<string, unknown> | null>(null);
 
+  // Config diff dialog state
+  const [diffOpen, setDiffOpen] = React.useState(false);
+  const [pendingOriginal, setPendingOriginal] = React.useState<Record<string, unknown>>({});
+  const [pendingUpdate, setPendingUpdate] = React.useState<Record<string, unknown>>({});
+
+  const handleReload = async () => {
+    setReloading(true);
+    try {
+      await api.reloadConfig();
+      queryClient.invalidateQueries({ queryKey: ["config"] });
+      toast(t("toast.reloadSuccess"), "success");
+    } catch {
+      toast(t("toast.reloadFailed"), "error");
+    } finally {
+      setReloading(false);
+    }
+  };
+
+  const { data: config, isLoading: configLoading } = useQuery({
+    queryKey: ["config"],
+    queryFn: api.getConfig,
+  });
+
+  const { data: tls } = useQuery({
+    queryKey: ["tls"],
+    queryFn: api.getTlsInfo,
+    staleTime: 60_000,
+  });
+
   // Store the last-saved config snapshot for comparison
   React.useEffect(() => {
     if (config && !savedConfig) {
@@ -66,35 +95,6 @@ export default function SettingsPage() {
     // Invalidate config to re-fetch and reset form states via key props
     queryClient.invalidateQueries({ queryKey: ["config"] });
   }, [config, queryClient]);
-
-  // Config diff dialog state
-  const [diffOpen, setDiffOpen] = React.useState(false);
-  const [pendingOriginal, setPendingOriginal] = React.useState<Record<string, unknown>>({});
-  const [pendingUpdate, setPendingUpdate] = React.useState<Record<string, unknown>>({});
-
-  async function handleReload() {
-    setReloading(true);
-    try {
-      await api.reloadConfig();
-      queryClient.invalidateQueries({ queryKey: ["config"] });
-      toast(t("toast.reloadSuccess"), "success");
-    } catch {
-      toast(t("toast.reloadFailed"), "error");
-    } finally {
-      setReloading(false);
-    }
-  }
-
-  const { data: config, isLoading: configLoading } = useQuery({
-    queryKey: ["config"],
-    queryFn: api.getConfig,
-  });
-
-  const { data: tls } = useQuery({
-    queryKey: ["tls"],
-    queryFn: api.getTlsInfo,
-    staleTime: 60_000,
-  });
 
   const patchConfig = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.patchConfig(data),
@@ -317,7 +317,6 @@ export default function SettingsPage() {
 
       <PresetSelector />
 
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div onChange={handleFormChange} onInput={handleFormChange}>
       <Tabs defaultValue="general">
         <TabsList>
