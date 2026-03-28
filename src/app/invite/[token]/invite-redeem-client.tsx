@@ -234,7 +234,7 @@ export default function InviteRedeemClient() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Prisma Console v2.25.0
+          Prisma Console v2.28.0
         </p>
       </div>
     </div>
