@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ComposableMap, ZoomableGroup } from "react-simple-maps";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { MOCK_GEO_DATA, MOCK_SERVER_GEO } from "@/lib/mock-geo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/loading-placeholder";
@@ -33,17 +34,22 @@ export function ConnectionMap() {
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState<[number, number]>([0, 0]);
 
-  const { data: geo } = useQuery({
+  const { data: rawGeo } = useQuery({
     queryKey: ["connections-geo"],
     queryFn: () => api.getConnectionGeo(),
     refetchInterval: 15000,
   });
 
-  const { data: serverGeo } = useQuery({
+  const { data: rawServerGeo } = useQuery({
     queryKey: ["server-geo"],
     queryFn: () => api.getServerGeo(),
     staleTime: 5 * 60 * 1000,
   });
+
+  // In development, fall back to mock data when the API returns nothing
+  const isDev = process.env.NODE_ENV === "development";
+  const geo = rawGeo && rawGeo.length > 0 ? rawGeo : isDev ? MOCK_GEO_DATA : rawGeo;
+  const serverGeo = rawServerGeo ?? (isDev ? MOCK_SERVER_GEO : null);
 
   const countryTotals = useMemo(() => {
     if (!geo) return {} as Record<string, number>;

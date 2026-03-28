@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Geographies, Geography } from "react-simple-maps";
 import geoData from "@/data/world-50m.json";
 import { type MapColors, countToFill } from "./use-map-colors";
+import { numericToAlpha2 } from "./country-codes";
 
 interface MapGeographyProps {
   countryTotals: Record<string, number>;
@@ -14,12 +15,12 @@ interface MapGeographyProps {
 }
 
 function getCountryId(geo: { properties: Record<string, unknown>; id?: string }): string {
-  return (
-    (geo.properties.ISO_A2 as string) ??
-    (geo.properties.iso_a2 as string) ??
-    (geo.id as string) ??
-    ""
-  );
+  // Some TopoJSON sources include ISO_A2 directly in properties
+  const alpha2 = (geo.properties.ISO_A2 ?? geo.properties.iso_a2) as string | undefined;
+  if (alpha2 && alpha2 !== "-99") return alpha2;
+  // Fall back: convert numeric ISO 3166-1 ID to alpha-2
+  const numId = String(geo.id ?? "");
+  return numericToAlpha2[numId] ?? numId;
 }
 
 function getCountryName(geo: { properties: Record<string, unknown> }): string {
