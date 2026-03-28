@@ -2,6 +2,9 @@
   "name": "prisma-console",
   "version": "2.27.0",
   "private": true,
+  "repository": "https://github.com/prisma-proxy/prisma-console",
+  "homepage": "https://github.com/prisma-proxy/prisma-console",
+  "bugs": "https://github.com/prisma-proxy/prisma-console/issues",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
