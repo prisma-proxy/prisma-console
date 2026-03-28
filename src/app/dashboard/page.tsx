@@ -17,6 +17,7 @@ import {
 import { useMetricsContext } from "@/contexts/metrics-context";
 import { useConnections, useDisconnect } from "@/hooks/use-connections";
 import { useClients } from "@/hooks/use-clients";
+import { EmptyState } from "@/components/ui/loading-placeholder";
 import { MetricsCards } from "@/components/dashboard/metrics-cards";
 import { HealthScore } from "@/components/dashboard/health-score";
 import { TrafficChart } from "@/components/dashboard/traffic-chart";
@@ -121,9 +122,19 @@ function ClientDashboard() {
         </CardHeader>
         <CardContent>
           {!clients?.length ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No clients yet. Redeem a code to get started.
-            </p>
+            <EmptyState
+              icon={UserPlus}
+              title={t("empty.noClients")}
+              description={t("dashboard.emptyClientDescription")}
+              action={
+                <Link href="/dashboard/clients/">
+                  <Button size="sm">
+                    <UserPlus className="h-4 w-4 mr-1.5" />
+                    {t("dashboard.createClient")}
+                  </Button>
+                </Link>
+              }
+            />
           ) : (
             <div className="space-y-2">
               {clients.map((c) => (

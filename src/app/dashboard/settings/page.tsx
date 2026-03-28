@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { RefreshCw, Download, Upload, ShieldAlert } from "lucide-react";
+import { RefreshCw, Download, Upload, ShieldAlert, AlertTriangle } from "lucide-react";
 import { exportToJSON } from "@/lib/export";
 import { PresetSelector } from "@/components/settings/preset-selector";
 import { ConfigHistory } from "@/components/settings/config-history";
@@ -30,6 +30,42 @@ export default function SettingsPage() {
   const { isAdmin } = useRole();
   const queryClient = useQueryClient();
   const [reloading, setReloading] = React.useState(false);
+
+  // Unsaved changes tracking
+  const [isDirty, setIsDirty] = React.useState(false);
+  const [savedConfig, setSavedConfig] = React.useState<Record<string, unknown> | null>(null);
+
+  // Store the last-saved config snapshot for comparison
+  React.useEffect(() => {
+    if (config && !savedConfig) {
+      setSavedConfig(JSON.parse(JSON.stringify(config)));
+    }
+  }, [config, savedConfig]);
+
+  // Warn on page leave when dirty
+  React.useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  /** Mark form as dirty when any input changes within the settings container */
+  const handleFormChange = React.useCallback(() => {
+    setIsDirty(true);
+  }, []);
+
+  /** Discard changes by resetting forms to saved config */
+  const handleDiscard = React.useCallback(() => {
+    if (config) {
+      setSavedConfig(JSON.parse(JSON.stringify(config)));
+    }
+    setIsDirty(false);
+    // Invalidate config to re-fetch and reset form states via key props
+    queryClient.invalidateQueries({ queryKey: ["config"] });
+  }, [config, queryClient]);
 
   // Config diff dialog state
   const [diffOpen, setDiffOpen] = React.useState(false);
@@ -66,6 +102,8 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["config"] });
       toast(t("toast.settingsSaved"), "success");
       setDiffOpen(false);
+      setIsDirty(false);
+      setSavedConfig(null); // Will re-snapshot on next config fetch
     },
     onError: (error: Error) => {
       toast(error.message, "error");
@@ -262,8 +300,25 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {isDirty && (
+        <div className="flex items-center gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm">
+          <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+          <span className="text-yellow-700 dark:text-yellow-400">{t("settings.unsavedChanges")}</span>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleDiscard}>{t("settings.discard")}</Button>
+            <Button size="sm" onClick={() => {
+              // Trigger the save on the currently visible form by submitting it
+              const form = document.querySelector<HTMLFormElement>('[data-settings-form]');
+              if (form) form.requestSubmit();
+            }}>{t("settings.saveChanges")}</Button>
+          </div>
+        </div>
+      )}
+
       <PresetSelector />
 
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div onChange={handleFormChange} onInput={handleFormChange}>
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">{t("settings.general")}</TabsTrigger>
@@ -351,6 +406,7 @@ export default function SettingsPage() {
           <ConfigHistory />
         </TabsContent>
       </Tabs>
+      </div>
 
       <ConfigDiffDialog
         open={diffOpen}
