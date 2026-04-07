@@ -23,15 +23,11 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
-
-  // Sync from localStorage after mount
-  useEffect(() => {
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof window === "undefined") return "en";
     const saved = localStorage.getItem("prisma-locale") as Locale | null;
-    if (saved && dictionaries[saved]) {
-      setLocaleState(saved);
-    }
-  }, []);
+    return saved && dictionaries[saved] ? saved : "en";
+  });
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);

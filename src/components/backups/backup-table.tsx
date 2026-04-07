@@ -175,17 +175,15 @@ export function BackupTable({
     );
   }
 
-  function SortableHeader({ field, children }: { field: SortField; children: React.ReactNode }) {
-    return (
-      <TableHead
-        className="cursor-pointer select-none hover:text-foreground transition-colors"
-        onClick={() => handleSort(field)}
-      >
-        {children}
-        <SortIcon field={field} />
-      </TableHead>
-    );
-  }
+  const sortableHeader = (field: SortField, label: string) => (
+    <TableHead
+      className="cursor-pointer select-none hover:text-foreground transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      {label}
+      <SortIcon field={field} />
+    </TableHead>
+  );
 
   return (
     <>
@@ -216,10 +214,10 @@ export function BackupTable({
                 aria-label="Select all"
               />
             </TableHead>
-            <SortableHeader field="name">{t("backups.name")}</SortableHeader>
-            <SortableHeader field="type">{t("backups.type")}</SortableHeader>
-            <SortableHeader field="timestamp">{t("backups.timestamp")}</SortableHeader>
-            <SortableHeader field="size">{t("backups.size")}</SortableHeader>
+            {sortableHeader("name", t("backups.name"))}
+            {sortableHeader("type", t("backups.type"))}
+            {sortableHeader("timestamp", t("backups.timestamp"))}
+            {sortableHeader("size", t("backups.size"))}
             <TableHead className="text-right">{t("backups.actions")}</TableHead>
           </TableRow>
         </TableHeader>

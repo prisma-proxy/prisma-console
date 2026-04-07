@@ -11,7 +11,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/lib/toast-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function CertificatesForm() {
-  const { t } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

@@ -37,6 +37,7 @@ export function ConnectionMap() {
 
   // Drag state
   const dragRef = useRef<{ x: number; y: number; rot: [number, number, number] } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const { data: rawGeo } = useQuery({
     queryKey: ["connections-geo"],
@@ -124,11 +125,13 @@ export function ConnectionMap() {
     // Only start drag on the map area, not on controls
     if ((e.target as HTMLElement).closest("button")) return;
     dragRef.current = { x: e.clientX, y: e.clientY, rot: [...rotation] };
+    setIsDragging(true);
     e.preventDefault();
   }, [rotation]);
 
   const handleMouseUp = useCallback(() => {
     dragRef.current = null;
+    setIsDragging(false);
   }, []);
 
   const handleZoomIn = useCallback(() => {
@@ -180,7 +183,7 @@ export function ConnectionMap() {
           className="relative rounded-lg overflow-hidden border shadow-sm select-none"
           style={{
             backgroundColor: colors.ocean,
-            cursor: dragRef.current ? "grabbing" : "grab",
+            cursor: isDragging ? "grabbing" : "grab",
           }}
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
@@ -188,6 +191,7 @@ export function ConnectionMap() {
           onMouseLeave={() => {
             clearTooltip();
             dragRef.current = null;
+            setIsDragging(false);
           }}
         >
           {/* Zoom controls */}

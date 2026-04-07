@@ -28,19 +28,16 @@ function resolveTheme(t: Theme): "light" | "dark" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("dark");
-
-  // Sync from localStorage after mount
-  useEffect(() => {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
     const saved = localStorage.getItem("prisma-theme") as Theme | null;
-    if (saved && (saved === "light" || saved === "dark" || saved === "system")) {
-      setThemeState(saved);
-      setResolvedTheme(resolveTheme(saved));
-    } else {
-      setResolvedTheme(resolveTheme("system"));
-    }
-  }, []);
+    return saved && (saved === "light" || saved === "dark" || saved === "system") ? saved : "system";
+  });
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "dark";
+    const saved = localStorage.getItem("prisma-theme") as Theme | null;
+    return resolveTheme(saved && (saved === "light" || saved === "dark" || saved === "system") ? saved : "system");
+  });
 
   // Sync DOM class on mount and when theme changes
   useEffect(() => {

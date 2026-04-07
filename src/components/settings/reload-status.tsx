@@ -20,7 +20,7 @@ export function ReloadStatus() {
   const [reloading, setReloading] = useState(false);
   const [lastEvent, setLastEvent] = useState<ReloadEvent | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
-  const [restartRequired, setRestartRequired] = useState(false);
+  const [restartRequired] = useState(false);
 
   // Subscribe to WebSocket reload events
   useEffect(() => {
