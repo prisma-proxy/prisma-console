@@ -222,6 +222,7 @@ export function TrafficChart({ history }: TrafficChartProps) {
                 contentStyle={tooltipStyle}
               />
               <Area
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="uploadMbps"
                 name="uploadMbps"
@@ -231,6 +232,7 @@ export function TrafficChart({ history }: TrafficChartProps) {
                 strokeWidth={2}
               />
               <Area
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="downloadMbps"
                 name="downloadMbps"
@@ -277,6 +279,7 @@ export function TrafficChart({ history }: TrafficChartProps) {
                 contentStyle={tooltipStyle}
               />
               <Area
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="bytes_up"
                 name="bytes_up"
@@ -286,6 +289,7 @@ export function TrafficChart({ history }: TrafficChartProps) {
                 strokeWidth={2}
               />
               <Area
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="bytes_down"
                 name="bytes_down"

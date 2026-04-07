@@ -119,6 +119,7 @@ export function ResourceChart() {
                 contentStyle={CHART_TOOLTIP_STYLE}
               />
               <Area
+                isAnimationActive={false}
                 yAxisId="left"
                 type="monotone"
                 dataKey="cpu"
@@ -129,6 +130,7 @@ export function ResourceChart() {
                 strokeWidth={2}
               />
               <Area
+                isAnimationActive={false}
                 yAxisId="right"
                 type="monotone"
                 dataKey="memory"

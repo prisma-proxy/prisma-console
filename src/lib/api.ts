@@ -47,7 +47,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) },
   });
   const text = await res.text();
-  if (!text) return undefined as unknown as T;
+  if (!text) return null as T;
   return JSON.parse(text) as T;
 }
 
@@ -151,6 +151,30 @@ export const api = {
   // Reload
   reloadConfig: () =>
     apiFetch<{ success: boolean; message: string; changes: string[] }>("/api/reload", { method: "POST" }),
+
+  // Config sections (v14+ DB-first)
+  listConfigSections: () =>
+    apiFetch<{ sections: { section: string; config: Record<string, unknown> }[] }>("/api/config/sections"),
+  getConfigSection: (section: string) =>
+    apiFetch<{ section: string; config: Record<string, unknown> }>(`/api/config/sections/${section}`),
+  updateConfigSection: (section: string, config: Record<string, unknown>) =>
+    apiFetch<{ success: boolean; restart_required: boolean; message: string }>(
+      `/api/config/sections/${section}`,
+      { method: "PUT", body: JSON.stringify(config) },
+    ),
+
+  // Certificates
+  listCertificates: () =>
+    apiFetch<{ certificates: { name: string; fingerprint: string | null; not_after: string | null; uploaded_at: string }[] }>("/api/certificates"),
+  getCertificate: (name: string) =>
+    apiFetch<{ name: string; fingerprint: string | null; not_after: string | null; uploaded_at: string }>(`/api/certificates/${name}`),
+  uploadCertificate: (data: { name: string; cert: string; key: string }) =>
+    apiFetch<{ success: boolean; name: string; fingerprint: string | null; not_after: string | null }>(
+      "/api/certificates",
+      { method: "POST", body: JSON.stringify(data) },
+    ),
+  deleteCertificate: (name: string) =>
+    apiFetch<{ success: boolean }>(`/api/certificates/${name}`, { method: "DELETE" }),
 
   // System
   getSystemInfo: () =>

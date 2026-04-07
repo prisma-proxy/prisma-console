@@ -89,6 +89,7 @@ export function ClientTrafficChart({ connections, clientId }: ClientTrafficChart
                   contentStyle={CHART_TOOLTIP_STYLE}
                 />
                 <Area
+                  isAnimationActive={false}
                   type="monotone"
                   dataKey="bytes_up"
                   name="bytes_up"
@@ -98,6 +99,7 @@ export function ClientTrafficChart({ connections, clientId }: ClientTrafficChart
                   strokeWidth={2}
                 />
                 <Area
+                  isAnimationActive={false}
                   type="monotone"
                   dataKey="bytes_down"
                   name="bytes_down"

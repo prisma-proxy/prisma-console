@@ -56,6 +56,7 @@ export function TransportPie({ connections }: TransportPieProps) {
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
+                isAnimationActive={false}
                 data={data}
                 dataKey="value"
                 nameKey="name"

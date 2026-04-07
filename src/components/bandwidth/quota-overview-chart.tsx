@@ -61,12 +61,14 @@ export function QuotaOverviewChart({ clients }: QuotaOverviewChartProps) {
               contentStyle={CHART_TOOLTIP_STYLE}
             />
             <Bar
+              isAnimationActive={false}
               dataKey="used"
               stackId="quota"
               fill="hsl(217, 91%, 60%)"
               radius={[0, 0, 0, 0]}
             />
             <Bar
+              isAnimationActive={false}
               dataKey="remaining"
               stackId="quota"
               fill="hsl(217, 91%, 60%)"

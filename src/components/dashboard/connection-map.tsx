@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ComposableMap, ZoomableGroup } from "react-simple-maps";
+import { ComposableMap } from "react-simple-maps";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { MOCK_GEO_DATA, MOCK_SERVER_GEO } from "@/lib/mock-geo";
@@ -16,23 +16,27 @@ import { CityMarkers, ServerMarker } from "./connection-map/map-markers";
 import { MapTooltip } from "./connection-map/map-tooltip";
 import { MapLegend } from "./connection-map/map-legend";
 
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 5;
+const BASE_SCALE = 250;
+const MIN_SCALE = 200;
+const MAX_SCALE = 600;
 
 export function ConnectionMap() {
   const { t } = useI18n();
   const colors = useMapColors();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Tooltip state — positioned relative to container
+  // Tooltip state
   const [tooltipContent, setTooltipContent] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [hoveredGeo, setHoveredGeo] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<string | null>(null);
 
-  // Zoom + pan state
-  const [zoom, setZoom] = useState(1);
-  const [center, setCenter] = useState<[number, number]>([0, 0]);
+  // Globe rotation: [lambda, phi, gamma] — longitude, latitude, roll
+  const [rotation, setRotation] = useState<[number, number, number]>([0, -20, 0]);
+  const [scale, setScale] = useState(BASE_SCALE);
+
+  // Drag state
+  const dragRef = useRef<{ x: number; y: number; rot: [number, number, number] } | null>(null);
 
   const { data: rawGeo } = useQuery({
     queryKey: ["connections-geo"],
@@ -46,7 +50,6 @@ export function ConnectionMap() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // In development, fall back to mock data when the API returns nothing
   const isDev = process.env.NODE_ENV === "development";
   const geo = rawGeo && rawGeo.length > 0 ? rawGeo : isDev ? MOCK_GEO_DATA : rawGeo;
   const serverGeo = rawServerGeo ?? (isDev ? MOCK_SERVER_GEO : null);
@@ -67,17 +70,17 @@ export function ConnectionMap() {
 
   const maxCityCount = useMemo(
     () => (cityEntries.length > 0 ? Math.max(...cityEntries.map((e) => e.count), 1) : 1),
-    [cityEntries]
+    [cityEntries],
   );
 
   const totalConnections = useMemo(
     () => (geo ? geo.reduce((sum, g) => sum + g.count, 0) : 0),
-    [geo]
+    [geo],
   );
 
   const uniqueCountries = useMemo(
     () => Object.keys(countryTotals).length,
-    [countryTotals]
+    [countryTotals],
   );
 
   const clearTooltip = useCallback(() => {
@@ -103,19 +106,42 @@ export function ConnectionMap() {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setTooltipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+
+    // Handle drag rotation
+    if (dragRef.current) {
+      const dx = e.clientX - dragRef.current.x;
+      const dy = e.clientY - dragRef.current.y;
+      const sensitivity = 0.3;
+      // Longitude wraps infinitely — no clamping
+      const newLambda = dragRef.current.rot[0] + dx * sensitivity;
+      // Latitude clamped to ±90
+      const newPhi = Math.max(-90, Math.min(90, dragRef.current.rot[1] - dy * sensitivity));
+      setRotation([newLambda, newPhi, 0]);
+    }
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Only start drag on the map area, not on controls
+    if ((e.target as HTMLElement).closest("button")) return;
+    dragRef.current = { x: e.clientX, y: e.clientY, rot: [...rotation] };
+    e.preventDefault();
+  }, [rotation]);
+
+  const handleMouseUp = useCallback(() => {
+    dragRef.current = null;
   }, []);
 
   const handleZoomIn = useCallback(() => {
-    setZoom((z) => Math.min(z * 1.4, MAX_ZOOM));
+    setScale((s) => Math.min(s * 1.3, MAX_SCALE));
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoom((z) => Math.max(z / 1.4, MIN_ZOOM));
+    setScale((s) => Math.max(s / 1.3, MIN_SCALE));
   }, []);
 
   const handleReset = useCallback(() => {
-    setZoom(1);
-    setCenter([0, 0]);
+    setScale(BASE_SCALE);
+    setRotation([0, -20, 0]);
   }, []);
 
   if (!geo || geo.length === 0) {
@@ -144,16 +170,25 @@ export function ConnectionMap() {
           {t("connectionMap.title")}
         </CardTitle>
         <span className="text-xs font-medium text-muted-foreground">
-          {totalConnections} {totalConnections === 1 ? "connection" : "connections"} from {uniqueCountries} {uniqueCountries === 1 ? "country" : "countries"}
+          {totalConnections} {totalConnections === 1 ? "connection" : "connections"} from{" "}
+          {uniqueCountries} {uniqueCountries === 1 ? "country" : "countries"}
         </span>
       </CardHeader>
       <CardContent>
         <div
           ref={containerRef}
-          className="relative rounded-lg overflow-hidden border shadow-sm"
+          className="relative rounded-lg overflow-hidden border shadow-sm select-none"
+          style={{
+            backgroundColor: colors.ocean,
+            cursor: dragRef.current ? "grabbing" : "grab",
+          }}
           onMouseMove={handleMouseMove}
-          onMouseLeave={clearTooltip}
-          style={{ backgroundColor: colors.ocean }}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={() => {
+            clearTooltip();
+            dragRef.current = null;
+          }}
         >
           {/* Zoom controls */}
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
@@ -162,7 +197,7 @@ export function ConnectionMap() {
               variant="outline"
               className="h-6 w-6 bg-background/90 hover:bg-background shadow-sm"
               onClick={handleZoomIn}
-              disabled={zoom >= MAX_ZOOM}
+              disabled={scale >= MAX_SCALE}
             >
               <Plus className="h-3 w-3" />
             </Button>
@@ -171,7 +206,7 @@ export function ConnectionMap() {
               variant="outline"
               className="h-6 w-6 bg-background/90 hover:bg-background shadow-sm"
               onClick={handleZoomOut}
-              disabled={zoom <= MIN_ZOOM}
+              disabled={scale <= MIN_SCALE}
             >
               <Minus className="h-3 w-3" />
             </Button>
@@ -180,54 +215,49 @@ export function ConnectionMap() {
               variant="outline"
               className="h-6 w-6 bg-background/90 hover:bg-background shadow-sm"
               onClick={handleReset}
-              disabled={zoom === 1}
+              disabled={scale === BASE_SCALE && rotation[0] === 0 && rotation[1] === -20}
             >
               <RotateCcw className="h-3 w-3" />
             </Button>
-            {zoom > 1 && (
-              <span className="text-[10px] text-muted-foreground text-center leading-none">
-                {zoom.toFixed(1)}x
-              </span>
-            )}
           </div>
 
           <ComposableMap
-            projection="geoNaturalEarth1"
-            projectionConfig={{ scale: 147, center: [0, 0] }}
-            width={800}
-            height={400}
+            projection="geoOrthographic"
+            projectionConfig={{
+              scale,
+              rotate: rotation,
+              center: [0, 0],
+            }}
+            width={500}
+            height={500}
             style={{ width: "100%", height: "auto" }}
           >
-            <ZoomableGroup
-              zoom={zoom}
-              center={center}
-              minZoom={MIN_ZOOM}
-              maxZoom={MAX_ZOOM}
-              onMoveEnd={({ coordinates, zoom: z }) => {
-                setZoom(z);
-                setCenter(coordinates);
-              }}
-            >
-              <MapGeography
-                countryTotals={countryTotals}
-                colors={colors}
-                hoveredGeo={hoveredGeo}
-                onHover={handleGeoHover}
-                onLeave={clearTooltip}
-              />
-              <CityMarkers
-                cityEntries={cityEntries}
-                maxCityCount={maxCityCount}
-                colors={colors}
-                hoveredCity={hoveredCity}
-                onHover={handleCityHover}
-                onLeave={clearTooltip}
-              />
-              <ServerMarker
-                serverGeo={serverGeo}
-                colors={colors}
-              />
-            </ZoomableGroup>
+            {/* Globe sphere (ocean background) */}
+            <circle
+              cx={250}
+              cy={250}
+              r={scale}
+              fill={colors.ocean}
+              stroke={colors.border}
+              strokeWidth={0.5}
+            />
+
+            <MapGeography
+              countryTotals={countryTotals}
+              colors={colors}
+              hoveredGeo={hoveredGeo}
+              onHover={handleGeoHover}
+              onLeave={clearTooltip}
+            />
+            <CityMarkers
+              cityEntries={cityEntries}
+              maxCityCount={maxCityCount}
+              colors={colors}
+              hoveredCity={hoveredCity}
+              onHover={handleCityHover}
+              onLeave={clearTooltip}
+            />
+            <ServerMarker serverGeo={serverGeo} colors={colors} />
           </ComposableMap>
 
           <MapTooltip content={tooltipContent} position={tooltipPos} />

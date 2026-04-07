@@ -204,8 +204,8 @@ export default function ClientDetailPage({ clientId }: { clientId: string }) {
                   formatter={(value, name) => [formatBytes(Number(value)), name === "bytes_up" ? "Upload" : "Download"]}
                   contentStyle={CHART_TOOLTIP_STYLE}
                 />
-                <Area type="monotone" dataKey="bytes_up" name="bytes_up" stroke="hsl(217, 91%, 60%)" fill="hsl(217, 91%, 60%)" fillOpacity={0.15} strokeWidth={2} />
-                <Area type="monotone" dataKey="bytes_down" name="bytes_down" stroke="hsl(142, 71%, 45%)" fill="hsl(142, 71%, 45%)" fillOpacity={0.15} strokeWidth={2} />
+                <Area isAnimationActive={false} type="monotone" dataKey="bytes_up" name="bytes_up" stroke="hsl(217, 91%, 60%)" fill="hsl(217, 91%, 60%)" fillOpacity={0.15} strokeWidth={2} />
+                <Area isAnimationActive={false} type="monotone" dataKey="bytes_down" name="bytes_down" stroke="hsl(142, 71%, 45%)" fill="hsl(142, 71%, 45%)" fillOpacity={0.15} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>

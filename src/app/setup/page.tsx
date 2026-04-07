@@ -198,7 +198,7 @@ export default function SetupPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Prisma Console v2.9.0
+          Prisma Console
         </p>
       </div>
     </div>

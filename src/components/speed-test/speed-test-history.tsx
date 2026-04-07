@@ -117,6 +117,7 @@ export function SpeedTestHistory({ history, onClear }: SpeedTestHistoryProps) {
                 contentStyle={CHART_TOOLTIP_STYLE_SM}
               />
               <Line
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="download"
                 name="download"
@@ -126,6 +127,7 @@ export function SpeedTestHistory({ history, onClear }: SpeedTestHistoryProps) {
                 activeDot={{ r: 4 }}
               />
               <Line
+                isAnimationActive={false}
                 type="monotone"
                 dataKey="upload"
                 name="upload"

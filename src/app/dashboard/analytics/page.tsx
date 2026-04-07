@@ -373,6 +373,7 @@ export default function AnalyticsPage() {
                       contentStyle={resolvedTooltipStyle}
                     />
                     <Area
+                      isAnimationActive={false}
                       type="monotone"
                       dataKey="upload"
                       name="upload"
@@ -383,6 +384,7 @@ export default function AnalyticsPage() {
                       stackId="traffic"
                     />
                     <Area
+                      isAnimationActive={false}
                       type="monotone"
                       dataKey="download"
                       name="download"
@@ -598,6 +600,7 @@ export default function AnalyticsPage() {
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
                       <Pie
+                        isAnimationActive={false}
                         data={transportDistribution}
                         dataKey="value"
                         nameKey="name"
@@ -650,7 +653,7 @@ export default function AnalyticsPage() {
                         width={120}
                       />
                       <Tooltip contentStyle={resolvedTooltipStyle} />
-                      <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                      <Bar isAnimationActive={false} dataKey="count" radius={[0, 4, 4, 0]}>
                         {ruleBreakdown.map((_entry, index) => (
                           <Cell
                             key={`rule-${index}`}

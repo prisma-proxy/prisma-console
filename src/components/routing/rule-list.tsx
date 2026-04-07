@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Pencil, Trash2, GripVertical, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +14,8 @@ interface RuleListProps {
   onDelete: (id: string) => void;
   onToggle: (id: string, enabled: boolean) => void;
   onEdit: (rule: RoutingRule) => void;
+  onDuplicate?: (rule: RoutingRule) => void;
+  onReorder?: (updates: Array<{ id: string; priority: number }>) => void;
 }
 
 function formatCondition(rule: RoutingRule): string {
@@ -103,11 +105,15 @@ function conditionTypeBadge(type: string) {
   );
 }
 
-export function RuleList({ rules, onDelete, onToggle, onEdit }: RuleListProps) {
+export function RuleList({ rules, onDelete, onToggle, onEdit, onDuplicate, onReorder }: RuleListProps) {
   const { t } = useI18n();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+
+  // Drag-and-drop state
+  const dragIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -132,6 +138,57 @@ export function RuleList({ rules, onDelete, onToggle, onEdit }: RuleListProps) {
     setBatchConfirmOpen(false);
   }
 
+  function handleDragStart(e: React.DragEvent, index: number) {
+    dragIndexRef.current = index;
+    e.dataTransfer.effectAllowed = "move";
+    // Make the drag image slightly transparent
+    if (e.currentTarget instanceof HTMLElement) {
+      e.dataTransfer.setDragImage(e.currentTarget, 0, 0);
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIndex(index);
+  }
+
+  function handleDragLeave() {
+    setDragOverIndex(null);
+  }
+
+  function handleDrop(e: React.DragEvent, dropIndex: number) {
+    e.preventDefault();
+    setDragOverIndex(null);
+    const fromIndex = dragIndexRef.current;
+    dragIndexRef.current = null;
+
+    if (fromIndex === null || fromIndex === dropIndex || !onReorder) return;
+
+    // Reorder the sorted array
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(dropIndex, 0, moved);
+
+    // Compute new priorities: position * 10
+    const updates: Array<{ id: string; priority: number }> = [];
+    reordered.forEach((rule, i) => {
+      const newPriority = (i + 1) * 10;
+      if (rule.priority !== newPriority) {
+        updates.push({ id: rule.id, priority: newPriority });
+      }
+    });
+
+    if (updates.length > 0) {
+      onReorder(updates);
+    }
+  }
+
+  function handleDragEnd() {
+    dragIndexRef.current = null;
+    setDragOverIndex(null);
+  }
+
   if (rules.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -142,6 +199,7 @@ export function RuleList({ rules, onDelete, onToggle, onEdit }: RuleListProps) {
 
   const sorted = [...rules].sort((a, b) => a.priority - b.priority);
   const allSelected = selected.size === rules.length;
+  const enabledCount = rules.filter((r) => r.enabled).length;
 
   return (
     <>
@@ -169,16 +227,33 @@ export function RuleList({ rules, onDelete, onToggle, onEdit }: RuleListProps) {
             </Button>
           </>
         ) : (
-          <span className="text-xs text-muted-foreground">Select all</span>
+          <span className="text-xs text-muted-foreground">
+            {enabledCount}/{rules.length} {t("routing.enabled")}
+          </span>
         )}
       </div>
 
       <div className="space-y-2">
-        {sorted.map((rule) => (
+        {sorted.map((rule, index) => (
           <div
             key={rule.id}
-            className={`flex items-center gap-4 rounded-lg border px-4 py-3 ${selected.has(rule.id) ? "bg-muted/50" : ""}`}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+            className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${
+              selected.has(rule.id) ? "bg-muted/50" : ""
+            } ${
+              dragOverIndex === index
+                ? "border-primary bg-primary/5"
+                : ""
+            }`}
           >
+            {/* Drag handle */}
+            <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing" />
+
             <input
               type="checkbox"
               checked={selected.has(rule.id)}
@@ -204,6 +279,16 @@ export function RuleList({ rules, onDelete, onToggle, onEdit }: RuleListProps) {
               onCheckedChange={(checked: boolean) => onToggle(rule.id, checked)}
               size="sm"
             />
+            {onDuplicate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDuplicate(rule)}
+                aria-label={t("common.duplicate")}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

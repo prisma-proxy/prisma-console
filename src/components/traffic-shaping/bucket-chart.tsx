@@ -56,6 +56,7 @@ export function BucketChart({ bucketSizes }: BucketChartProps) {
                 contentStyle={CHART_TOOLTIP_STYLE}
               />
               <Bar
+                isAnimationActive={false}
                 dataKey="size"
                 fill="hsl(217, 91%, 60%)"
                 radius={[4, 4, 0, 0]}

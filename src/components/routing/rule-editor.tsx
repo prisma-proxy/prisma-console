@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n";
+import { api } from "@/lib/api";
 import type { RoutingRule, RuleCondition } from "@/lib/types";
 
 interface RuleEditorProps {
@@ -29,6 +31,8 @@ interface RuleEditorProps {
   isLoading: boolean;
   /** When set, the dialog opens in edit mode pre-filled with this rule. */
   editingRule?: RoutingRule | null;
+  /** Pre-fill the form for a new rule (duplicate). Opens in create mode. */
+  initialData?: Omit<RoutingRule, "id"> | null;
   /** Called when the dialog is closed (used to clear editingRule in parent). */
   onOpenChange?: (open: boolean) => void;
 }
@@ -127,27 +131,78 @@ function mapAction(action: FriendlyAction): "Allow" | "Direct" | "Block" {
   }
 }
 
-export function RuleEditor({ onSubmit, isLoading, editingRule, onOpenChange }: RuleEditorProps) {
+/* ── Validation helpers ── */
+const IPV4_CIDR_RE = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
+
+function getValidationHint(condType: FriendlyType, value: string): string | null {
+  if (!value) return null;
+
+  switch (condType) {
+    case "IP-CIDR": {
+      // IPv6 check: contains : and /
+      const isV6 = value.includes(":") && value.includes("/");
+      if (!isV6 && !IPV4_CIDR_RE.test(value)) {
+        return "Expected format: 192.168.0.0/24 or 2001:db8::/32";
+      }
+      return null;
+    }
+    case "PORT-RANGE": {
+      const parts = value.split("-");
+      if (parts.length !== 2) return "Expected format: 1000-2000 (0-65535)";
+      const [a, b] = parts.map(Number);
+      if (isNaN(a) || isNaN(b) || a < 0 || a > 65535 || b < 0 || b > 65535) {
+        return "Expected format: 1000-2000 (0-65535)";
+      }
+      if (a > b) {
+        return "Expected format: 1000-2000 (0-65535)";
+      }
+      return null;
+    }
+    case "DOMAIN":
+    case "DOMAIN-SUFFIX":
+    case "DOMAIN-KEYWORD": {
+      if (value.startsWith("http://") || value.startsWith("https://")) {
+        return "Enter domain without protocol prefix";
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+export function RuleEditor({ onSubmit, isLoading, editingRule, initialData, onOpenChange }: RuleEditorProps) {
   const { t } = useI18n();
   const isEditing = !!editingRule;
 
-  const initialType: FriendlyType = editingRule
-    ? parseConditionType(editingRule.condition).type
+  // Use editingRule for edit mode, or initialData for duplicate/pre-fill mode
+  const prefill = editingRule ?? (initialData ? { ...initialData, id: "" } as RoutingRule : null);
+
+  const initialType: FriendlyType = prefill
+    ? parseConditionType(prefill.condition).type
     : "FINAL";
-  const initialMatch = editingRule
-    ? parseConditionType(editingRule.condition).match
+  const initialMatch = prefill
+    ? parseConditionType(prefill.condition).match
     : "";
-  const initialAction: FriendlyAction = editingRule
-    ? parseAction(editingRule.action)
+  const initialAction: FriendlyAction = prefill
+    ? parseAction(prefill.action)
     : "PROXY";
 
-  const [open, setOpen] = useState(isEditing);
-  const [name, setName] = useState(editingRule?.name ?? "");
-  const [priority, setPriority] = useState(editingRule?.priority ?? 0);
+  const [open, setOpen] = useState(isEditing || !!initialData);
+  const [name, setName] = useState(prefill?.name ?? "");
+  const [priority, setPriority] = useState(prefill?.priority ?? 0);
   const [condType, setCondType] = useState<FriendlyType>(initialType);
   const [match, setMatch] = useState(initialMatch);
   const [action, setAction] = useState<FriendlyAction>(initialAction);
-  const [enabled, setEnabled] = useState(editingRule?.enabled ?? true);
+  const [enabled, setEnabled] = useState(prefill?.enabled ?? true);
+
+  // Test state
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    matched: boolean;
+    rule_name: string | null;
+    action: string | null;
+  } | null>(null);
 
   function resetForm() {
     setName("");
@@ -156,6 +211,7 @@ export function RuleEditor({ onSubmit, isLoading, editingRule, onOpenChange }: R
     setMatch("");
     setAction("PROXY");
     setEnabled(true);
+    setTestResult(null);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -179,6 +235,20 @@ export function RuleEditor({ onSubmit, isLoading, editingRule, onOpenChange }: R
     }
   }
 
+  async function handleTest() {
+    if (!match.trim()) return;
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const res = await api.testRoute(match.trim());
+      setTestResult(res);
+    } catch {
+      setTestResult(null);
+    } finally {
+      setTestLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -197,9 +267,11 @@ export function RuleEditor({ onSubmit, isLoading, editingRule, onOpenChange }: R
     }
   }
 
+  const validationHint = getValidationHint(condType, match);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {!isEditing && (
+      {!isEditing && !initialData && (
         <DialogTrigger className={cn(buttonVariants())}>{t("routing.addRule")}</DialogTrigger>
       )}
       <DialogContent className="sm:max-w-md">
@@ -235,6 +307,7 @@ export function RuleEditor({ onSubmit, isLoading, editingRule, onOpenChange }: R
               onValueChange={(val) => {
                 setCondType(val as FriendlyType);
                 if (val === "FINAL") setMatch("");
+                setTestResult(null);
               }}
             >
               <SelectTrigger className="w-full">
@@ -268,14 +341,65 @@ export function RuleEditor({ onSubmit, isLoading, editingRule, onOpenChange }: R
                   </SelectContent>
                 </Select>
               ) : (
-                <Input
-                  id="rule-match"
-                  type="text"
-                  placeholder={conditionPlaceholder()}
-                  value={match}
-                  onChange={(e) => setMatch(e.target.value)}
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="rule-match"
+                    type="text"
+                    placeholder={conditionPlaceholder()}
+                    value={match}
+                    onChange={(e) => {
+                      setMatch(e.target.value);
+                      setTestResult(null);
+                    }}
+                    required
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTest}
+                    disabled={testLoading || !match.trim()}
+                    className="shrink-0"
+                  >
+                    {testLoading ? t("routing.testing") : t("routing.testBtn")}
+                  </Button>
+                </div>
+              )}
+
+              {/* Validation hint */}
+              {validationHint && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {validationHint}
+                </p>
+              )}
+
+              {/* Inline test result */}
+              {testResult && (
+                <div className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs">
+                  {testResult.matched ? (
+                    <>
+                      <Badge
+                        className={`text-[10px] px-1.5 py-0 ${
+                          testResult.action === "REJECT" || testResult.action === "Block"
+                            ? "bg-red-500/15 text-red-700 dark:text-red-400"
+                            : testResult.action === "DIRECT" || testResult.action === "Direct"
+                              ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
+                              : "bg-green-500/15 text-green-700 dark:text-green-400"
+                        }`}
+                      >
+                        {testResult.action}
+                      </Badge>
+                      <span className="text-foreground truncate">
+                        {testResult.rule_name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {t("routing.testNoMatch")}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           )}

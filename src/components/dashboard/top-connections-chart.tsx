@@ -233,6 +233,7 @@ export function TopConnectionsChart() {
               />
               {topDests.map((dest, i) => (
                 <Line
+                  isAnimationActive={false}
                   key={dest}
                   type="monotone"
                   dataKey={dest}

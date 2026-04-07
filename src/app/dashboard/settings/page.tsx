@@ -23,6 +23,8 @@ import { exportToJSON } from "@/lib/export";
 import { PresetSelector } from "@/components/settings/preset-selector";
 import { ConfigHistory } from "@/components/settings/config-history";
 import { ConsoleSettingsForm } from "@/components/settings/console-settings-form";
+import { CertificatesForm } from "@/components/settings/certificates-form";
+import { ReloadStatus } from "@/components/settings/reload-status";
 
 export default function SettingsPage() {
   const { t } = useI18n();
@@ -288,12 +290,7 @@ export default function SettingsPage() {
             className="hidden"
             onChange={handleImportFileChange}
           />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReload}
-            disabled={reloading}
-          >
+          <Button variant="outline" size="sm" onClick={handleReload} disabled={reloading}>
             <RefreshCw className={`h-3.5 w-3.5 ${reloading ? "animate-spin" : ""}`} />
             {reloading ? t("settings.reloading") : t("settings.reloadConfig")}
           </Button>
@@ -315,6 +312,8 @@ export default function SettingsPage() {
         </div>
       )}
 
+      <ReloadStatus />
+
       <PresetSelector />
 
       <div onChange={handleFormChange} onInput={handleFormChange}>
@@ -326,6 +325,7 @@ export default function SettingsPage() {
           <TabsTrigger value="security">{t("settings.security")}</TabsTrigger>
           <TabsTrigger value="advanced">{t("settings.advanced")}</TabsTrigger>
           <TabsTrigger value="alerts">{t("settings.alerts")}</TabsTrigger>
+          <TabsTrigger value="certificates">Certificates</TabsTrigger>
           <TabsTrigger value="console">{t("settings.console") || "Console"}</TabsTrigger>
           <TabsTrigger value="history">{t("settings.history")}</TabsTrigger>
         </TabsList>
@@ -395,6 +395,10 @@ export default function SettingsPage() {
 
         <TabsContent value="alerts">
           <AlertsForm />
+        </TabsContent>
+
+        <TabsContent value="certificates">
+          <CertificatesForm />
         </TabsContent>
 
         <TabsContent value="console">

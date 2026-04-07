@@ -79,6 +79,7 @@ export function GeoIPPie() {
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie
+                isAnimationActive={false}
                 data={geo}
                 dataKey="count"
                 nameKey="country"

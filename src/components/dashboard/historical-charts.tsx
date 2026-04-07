@@ -92,6 +92,7 @@ export function HistoricalCharts() {
                 />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Area
+                  isAnimationActive={false}
                   type="monotone"
                   dataKey="connections"
                   stroke={CHART_THEME.upload}

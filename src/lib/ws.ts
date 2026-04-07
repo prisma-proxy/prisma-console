@@ -39,9 +39,18 @@ export function createWebSocket<T>(
     isFirstConnect = false;
     ws = new WebSocket(wsUrl);
 
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
     ws.onopen = () => {
       reconnectDelay = 1000;
       onStatusChange?.("connected");
+
+      // Send periodic heartbeat to detect stalled connections
+      heartbeatTimer = setInterval(() => {
+        if (ws?.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 30000);
     };
 
     ws.onmessage = (event) => {
@@ -58,6 +67,10 @@ export function createWebSocket<T>(
     };
 
     ws.onclose = (event) => {
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
       // 4001/4003 = auth failure — don't reconnect with a bad token
       if (event.code === 4001 || event.code === 4003 || event.code === 1008) {
         shouldReconnect = false;
